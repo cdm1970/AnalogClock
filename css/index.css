@@ -1,0 +1,26 @@
+.countryBox {
+    float:left;
+    width: 1000px;
+}
+
+.clock {
+    float: left;
+}
+
+.btn {
+    margin-top: 15px;
+    margin-bottom: 15px;
+    border: none;
+    background: none;
+    width: 300px;
+    height: 190px;
+}
+
+.btn>img {
+    width: 30%;
+    height: 30%;
+}
+
+.flag {
+    border: 1px solid black;
+}
