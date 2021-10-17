@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <link rel= "stylesheet" type="text/css" href="css/index.css">
+        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+        <title>SSAFY 세계 시계</title>
+    </head>
+    <body>
+        <div id="app">
+            <clock :current-date="currentDate" :current-location="currentLocation"></clock>
+            <div class="countryBox">
+                <div v-for="countryInfos in countries2Dimension">
+                    <flag-button @set-time-event="setTime" v-for="countryInfo in countryInfos" :key="countryInfo.name" :country-info="countryInfo"></flag-button>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script>
+        const clock = {
+            props: ["currentDate", "currentLocation"],
+            template: `
+            <svg height="500" width="500" class="clock">
+                <circle cx="200" cy="200" r="195" fill="#8c531b"/>
+                <circle cx="200" cy="200" r="180" fill="white"/>
+                <line v-for="point in points" :x1="point.x1" :y1="point.y1" :x2="point.x2" :y2="point.y2" style="stroke:black; stroke-width:2"/>
+                <line x1="200" y1="200" :x2="secondHandPoint.x" :y2="secondHandPoint.y" style="stroke:black; stroke-width:2" />
+                <line x1="200" y1="200" :x2="minuteHandPoint.x" :y2="minuteHandPoint.y" style="stroke:rgb(233, 149, 149); stroke-width:2" />
+                <line x1="200" y1="200" :x2="hourHandPoint.x" :y2="hourHandPoint.y" style="stroke:rgb(180, 223, 213); stroke-width:2" />
+                <circle cx="200" cy="200" r="2" fill="black"></circle>
+                <text x="100.29" y="430" fill="black">{{ currentDate.toLocaleString() }}</text>
+                <text x="146.635" y="450" fill="black">{{ currentLocation }}</text>
+            </svg>
+            `,
+            computed: {
+                points: function() {
+                    points = [];
+                    
+                    for (i = 1; i <= 60; i++) {
+                        const phi = i * 6;
+                        const theta = Math.PI * (90 - phi) / 180;
+                        if (phi % 30 === 0) {
+                            point = {
+                                mark: true,
+                                x1: 200 + 180 * Math.cos(theta),
+                                y1: 200 - 180 * Math.sin(theta),
+                                x2: 200 + 170 * Math.cos(theta),
+                                y2: 200 - 170 * Math.sin(theta),
+                            }
+                        } else {
+                            point = {
+                                mark: false,
+                                x1: 200 + 180 * Math.cos(theta),
+                                y1: 200 - 180 * Math.sin(theta),
+                                x2: 200 + 175 * Math.cos(theta),
+                                y2: 200 - 175 * Math.sin(theta),
+                            }
+                        }
+                        points.push(point);
+                    }
+
+                    return points
+                },
+                secondHandPoint: function() {
+                    const length = 200 * 0.8
+                    const tinyAngle = this.currentDate.getMilliseconds() * 6 / 1000;
+                    const theta = Math.PI * (90 - this.currentDate.getSeconds() * 6 - tinyAngle) / 180;
+                    return  {
+                        x: 200 + length * Math.cos(theta),
+                        y: 200 - length * Math.sin(theta),
+                    };
+                },
+                minuteHandPoint: function() {
+                    const length = 200 * 0.7
+                    const tinyAngle = this.currentDate.getSeconds() / 10;
+                    const theta = Math.PI * (90 - this.currentDate.getMinutes() * 6 - tinyAngle) / 180;
+                    return  {
+                        x: 200 + length * Math.cos(theta),
+                        y: 200 - length * Math.sin(theta),
+                    };
+                },
+                hourHandPoint: function() {
+                    const length = 200 * 0.6
+                    const tinyAngle = this.currentDate.getMinutes() * 0.5;
+                    const theta = Math.PI * (90 - this.currentDate.getHours() * 30 - tinyAngle) / 180;
+                    return  {
+                        x: 200 + length * Math.cos(theta),
+                        y: 200 - length * Math.sin(theta),
+                    };
+                },
+                countries2Dimension: function() {
+                    let result = [];
+                    const reminder = this.countries.length % 3;
+                    const quotient = (this.countries.length - reminder) / 3;
+
+                    for (let i = 0; i < quotient; i++) {
+                        result[i] = [];
+                        for (let j = 0; j < 3; j++) {
+                            const index = i * 3 + j;
+                            result[i].push(this.countries[index]);
+                        }
+                    }
+
+                    if (reminder !== 0) {
+                        result[quotient] = [];
+                        for (let i = 0; i < reminder; i++) {
+                            const index = quotient * 3 + i
+                            result[quotient].push(this.countries[index]);
+                        }
+                    }
+
+                    return result;
+                }
+            }
+        };
+
+        const flagButton = {
+            props: ["countryInfo"],
+            template: `
+            <button class="btn" @click="setTime(countryInfo)">
+                <img :src="getSrc(countryInfo.country)" :class="{ flag: isFlag(countryInfo.country)}"/>
+                <br>
+                <b>{{ countryInfo.country }}/{{ countryInfo.city }}</b>
+            </button>
+            `,
+            methods: {
+                getSrc: function(country) {
+                    return `img/${country}.svg`;
+                },
+                isFlag: function(country) {
+                    if (country === "대한민국" || country === "일본") {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                },
+                setTime: function(countryInfo) {
+                    this.$emit("set-time-event", countryInfo);
+                }
+            }
+        };
+
+        const vm = new Vue({
+            el: "#app",
+            data: {
+                timer: '',
+                currentLocation: "대한민국/서울",
+                currentDate: new Date(),
+                countries: [
+                    {
+                        country: "대한민국",
+                        city: "서울",
+                        diff: 0,
+                    },
+                    {
+                        country: "일본",
+                        city: "도쿄",
+                        diff: 0,
+                    },
+                    {
+                        country: "중국",
+                        city: "베이징",
+                        diff: -1,
+                    },
+                    {
+                        country: "영국",
+                        city: "런던",
+                        diff: -9,
+                    },
+                    {
+                        country: "독일",
+                        city: "베를린",
+                        diff: -8,
+                    },
+                    {
+                        country: "프랑스",
+                        city: "파리",
+                        diff: -8
+                    },
+                    {
+                        country: "미국",
+                        city: "워싱턴D.C",
+                        diff: -14,
+                    },
+                    {
+                        country: "캐나다",
+                        city: "벤쿠버",
+                        diff: -17,
+                    },
+                    {
+                        country: "브라질",
+                        city: "브라질리아",
+                        diff: -12,
+                    },
+                ]
+            },
+            computed: {
+                countries2Dimension: function() {
+                    let result = [];
+                    const reminder = this.countries.length % 3;
+                    const quotient = (this.countries.length - reminder) / 3;
+
+                    for (let i = 0; i < quotient; i++) {
+                        result[i] = [];
+                        for (let j = 0; j < 3; j++) {
+                            const index = i * 3 + j;
+                            result[i].push(this.countries[index]);
+                        }
+                    }
+
+                    if (reminder !== 0) {
+                        result[quotient] = [];
+                        for (let i = 0; i < reminder; i++) {
+                            const index = quotient * 3 + i
+                            result[quotient].push(this.countries[index]);
+                        }
+                    }
+
+                    return result;
+                }
+            },
+            mounted: function() {
+                const currentCountryInfo = {country: "대한민국", city: "서울", diff: 0,};
+                this.setTime(currentCountryInfo);
+            },
+            components: {
+                clock,
+                flagButton,
+            },
+            methods: {
+                setTime: function(countryInfo) {
+                    if (this.timer !== '') {
+                        clearInterval(this.timer);
+                    }
+                    this.currentLocation = `${countryInfo.country}/${countryInfo.city}`;
+
+                    this.timer = setInterval((diff = 0) => {
+                        const currentDate = new Date()
+                        currentDate.setHours(currentDate.getHours() + diff);
+                        this.currentDate = currentDate; 
+                    }, 50, countryInfo.diff);
+                },
+            }
+        });
+    </script>
+</html>
